@@ -5,7 +5,7 @@ public class Post : BaseIntEntity
     public string Title { get; set; } = null!;
     public string Content { get; set; } = null!;
 
-    public int PostStatusId { get; set; }
+    public sbyte PostStatusId { get; set; }
 
-    public DateTime PublishedAt { get; set; }
+    public DateTime? PublishedAt { get; set; }
 }
