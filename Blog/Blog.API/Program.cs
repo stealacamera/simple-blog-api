@@ -1,13 +1,17 @@
+using Blog.Application;
 using Blog.Infrastructure;
+using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.RegisterInfrastructureServices(builder.Configuration);
+builder.Services.RegisterApplicationServices();
 
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen();
+builder.Services.AddFluentValidationRulesToSwagger();
 
 var app = builder.Build();
 
