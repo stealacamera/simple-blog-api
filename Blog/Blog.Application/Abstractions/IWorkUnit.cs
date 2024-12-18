@@ -1,5 +1,4 @@
 ﻿using Blog.Application.Abstractions.Repositories;
-using Blog.Application.Abstractions.Services;
 
 namespace Blog.Application.Abstractions;
 
