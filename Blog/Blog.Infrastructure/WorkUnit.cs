@@ -1,5 +1,6 @@
 ﻿using Blog.Application.Abstractions;
 using Blog.Application.Abstractions.Repositories;
+using Blog.Application.Abstractions.Services;
 using Blog.Infrastructure.Repositories;
 
 namespace Blog.Infrastructure;
@@ -31,6 +32,16 @@ internal sealed class WorkUnit : IWorkUnit
         {
             _categoriesRepository ??= new CategoriesRepository(_dbContext); 
             return _categoriesRepository;
+        }
+    }
+
+    private IPostCategoriesRepository _postCategoriesRepository = null!;
+    public IPostCategoriesRepository PostCategoriesRepository
+    {
+        get
+        {
+            _postCategoriesRepository ??= new PostCategoriesRepository(_dbContext); 
+            return _postCategoriesRepository;
         }
     }
 }
