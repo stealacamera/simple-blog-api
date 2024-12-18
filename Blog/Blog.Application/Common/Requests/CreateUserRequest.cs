@@ -4,7 +4,7 @@ namespace Blog.Application.Common.Requests;
 
 public record CreateUserRequest(string Username, string Email, string Password);
 
-public class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
+public sealed class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
 {
     public CreateUserRequestValidator()
     {
