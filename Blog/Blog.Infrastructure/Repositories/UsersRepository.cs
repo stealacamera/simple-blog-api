@@ -17,4 +17,8 @@ internal sealed class UsersRepository : BaseIntRepository<User>, IUsersRepositor
     public async Task<bool> DoesUsernameExistAsync(string username, CancellationToken cancellationToken = default)
         => await _untrackedSet.Where(e => e.Username == username)
                               .AnyAsync(cancellationToken);
+
+    public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken)
+        => await _untrackedSet.Where(e => e.Email == email)
+                              .FirstOrDefaultAsync(cancellationToken);
 }
