@@ -7,4 +7,5 @@ public interface ICategoriesService
 {
     Task<Category> CreateAsync(CreateCategoryRequest request, CancellationToken cancellationToken = default);
     Task<Category> UpdateAsync(int id, UpdateCategoryRequest request, CancellationToken cancellationToken = default);
+    Task DeleteAsync(int id, CancellationToken cancellationToken = default);
 }
