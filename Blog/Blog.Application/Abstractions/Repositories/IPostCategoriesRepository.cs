@@ -1,7 +1,6 @@
-﻿using Blog.Application.Abstractions.Repositories;
-using Blog.Domain.Entities;
+﻿using Blog.Domain.Entities;
 
-namespace Blog.Application.Abstractions.Services;
+namespace Blog.Application.Abstractions.Repositories;
 
 public interface IPostCategoriesRepository : IBaseRepository<PostCategory>
 {
