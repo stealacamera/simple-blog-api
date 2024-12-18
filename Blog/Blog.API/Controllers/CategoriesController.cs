@@ -10,12 +10,10 @@ namespace Blog.API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-//[Authorize]
+[Authorize]
 public class CategoriesController : BaseController
 {
-    public CategoriesController(IServicesManager servicesManager) : base(servicesManager)
-    {
-    }
+    public CategoriesController(IServicesManager servicesManager) : base(servicesManager) { }
 
     [HttpPost]
     public async Task<Created<Category>> CreateAsync(
