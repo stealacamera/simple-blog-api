@@ -26,4 +26,19 @@ public class CategoriesController : BaseController
         var newCategory = await _servicesManager.CategoriesService.CreateAsync(request, cancellationToken);
         return TypedResults.Created(string.Empty, newCategory);
     }
+
+    [HttpPatch("{id:int:min(1)}")]
+    public async Task<Ok<Category>> UpdateAsync(
+        int id,
+        UpdateCategoryRequest request,
+        IValidator<UpdateCategoryRequest> validator,
+        CancellationToken cancellationToken)
+    {
+        await validator.ValidateAndThrowAsync(request, cancellationToken);
+
+        var updatedCategory = await _servicesManager.CategoriesService
+                                                    .UpdateAsync(id, request, cancellationToken);
+        
+        return TypedResults.Ok(updatedCategory);
+    }
 }
