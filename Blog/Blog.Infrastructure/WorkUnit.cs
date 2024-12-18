@@ -23,4 +23,14 @@ internal sealed class WorkUnit : IWorkUnit
             return _usersRepository;
         }
     }
+
+    private ICategoriesRepository _categoriesRepository = null!;
+    public ICategoriesRepository CategoriesRepository
+    {
+        get
+        {
+            _categoriesRepository ??= new CategoriesRepository(_dbContext); 
+            return _categoriesRepository;
+        }
+    }
 }

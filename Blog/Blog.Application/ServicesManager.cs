@@ -22,4 +22,14 @@ internal sealed class ServicesManager : IServicesManager
             return _usersService;
         }
     }
+
+    private ICategoriesService _categoriesService = null!;
+    public ICategoriesService CategoriesService
+    {
+        get
+        {
+            _categoriesService ??= new CategoriesService(_workUnit);
+            return _categoriesService;
+        }
+    }
 }
