@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Blog.Application.Abstractions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,5 +11,7 @@ public static class Startup
     {
         services.AddDbContext<AppDbContext>(
             options => options.UseSqlServer(configuration.GetConnectionString("Database")));
+
+        services.AddScoped<IWorkUnit, WorkUnit>();
     }
 }
