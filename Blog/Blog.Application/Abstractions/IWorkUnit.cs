@@ -6,5 +6,7 @@ public interface IWorkUnit
 {
     Task SaveChangesAsync();
 
+    // Repositories
     IUsersRepository UsersRepository { get; }
+    ICategoriesRepository CategoriesRepository { get; }
 }
