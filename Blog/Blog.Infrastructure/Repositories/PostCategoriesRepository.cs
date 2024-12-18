@@ -1,4 +1,4 @@
-﻿using Blog.Application.Abstractions.Services;
+﻿using Blog.Application.Abstractions.Repositories;
 using Blog.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 

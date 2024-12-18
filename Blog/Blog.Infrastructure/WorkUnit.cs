@@ -1,6 +1,5 @@
 ﻿using Blog.Application.Abstractions;
 using Blog.Application.Abstractions.Repositories;
-using Blog.Application.Abstractions.Services;
 using Blog.Infrastructure.Repositories;
 
 namespace Blog.Infrastructure;

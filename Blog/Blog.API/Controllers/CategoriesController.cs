@@ -15,6 +15,16 @@ public class CategoriesController : BaseController
 {
     public CategoriesController(IServicesManager servicesManager) : base(servicesManager) { }
 
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<Ok<IList<Category>>> GetAllAsync(CancellationToken cancellationToken)
+    {
+        var categories = await _servicesManager.CategoriesService
+                                               .GetAllAsync(cancellationToken);
+        
+        return TypedResults.Ok(categories);
+    }
+
     [HttpPost]
     public async Task<Created<Category>> CreateAsync(
         CreateCategoryRequest request, 

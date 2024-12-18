@@ -14,6 +14,15 @@ internal sealed class CategoriesService : BaseService, ICategoriesService
     {
     }
 
+    public async Task<IList<Category>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        var categories = await _workUnit.CategoriesRepository
+                                        .GetAllAsync(cancellationToken);
+
+        return categories.Select(e => new Category(e.Id, e.Name, e.Description))
+                         .ToList();
+    }
+
     public async Task<Category> CreateAsync(CreateCategoryRequest request, CancellationToken cancellationToken)
     {
         // Validate name uniqeness
