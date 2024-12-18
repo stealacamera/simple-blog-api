@@ -41,4 +41,11 @@ public class CategoriesController : BaseController
         
         return TypedResults.Ok(updatedCategory);
     }
+
+    [HttpDelete("{id:int:min(1)}")]
+    public async Task<NoContent> DeleteAsync(int id, CancellationToken cancellationToken)
+    {
+        await _servicesManager.CategoriesService.DeleteAsync(id, cancellationToken);
+        return TypedResults.NoContent();
+    }
 }

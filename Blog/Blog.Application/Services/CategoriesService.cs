@@ -57,4 +57,20 @@ internal sealed class CategoriesService : BaseService, ICategoriesService
         await _workUnit.SaveChangesAsync();
         return new Category(category.Id, category.Name, category.Description);
     }
+    
+    public async Task DeleteAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var category = await _workUnit.CategoriesRepository
+                                      .GetByIdAsync(id, cancellationToken);
+
+        if(category == null)
+            throw new EntityNotFoundException(nameof(Category));
+
+        // Don't proceed if category has posts
+        if (await _workUnit.PostCategoriesRepository.DoesCategoryHavePostsAsync(id, cancellationToken))
+            throw new CategoryHasPostsException();
+
+        _workUnit.CategoriesRepository.Delete(category);
+        await _workUnit.SaveChangesAsync();
+    }
 }
