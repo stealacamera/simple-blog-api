@@ -9,11 +9,11 @@ public sealed class CreateCategoryRequestValidator : AbstractValidator<CreateCat
     public CreateCategoryRequestValidator()
     {
         RuleFor(e => e.Name)
-            .MaximumLength(100)
+            .MaximumLength(ValidationUtils.CategoryMaxName)
             .NotEmpty();
 
         RuleFor(e => e.Description)
-            .MaximumLength(250)
+            .MaximumLength(ValidationUtils.CategoryMaxDescription)
             .NotEmpty();
     }
 }
