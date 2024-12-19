@@ -15,6 +15,23 @@ public class PostsController : BaseController
 {
     public PostsController(IServicesManager servicesManager) : base(servicesManager) { }
 
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<Ok<IList<Post>>> GetAllAsync(
+        CancellationToken cancellationToken,
+        string? filterByTitle = null,
+        string? filterByContent = null,
+        DateOnly? filterByPublicationDate = null)
+    {
+        var posts = await _servicesManager.PostsService
+                                          .GetAllAsync(
+                                                GetRequesterIdOrAnon(),
+                                                filterByTitle, filterByContent, 
+                                                filterByPublicationDate, cancellationToken);
+        
+        return TypedResults.Ok(posts);
+    }
+
     [HttpPost]
     public async Task<Created<Post>> CreateAsync(
         CreatePostRequest request, 
