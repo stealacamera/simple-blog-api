@@ -42,7 +42,7 @@ public class IdentityController : BaseController
         var user = await _servicesManager.UsersService
                                          .ValidateCredentialsAsync(request, cancellationToken);
 
-        await AuthenticateUserAsync(user.Email);
+        await AuthenticateUserAsync(user.Id, user.Email);
         return TypedResults.Ok();
     }
 
@@ -54,9 +54,15 @@ public class IdentityController : BaseController
         return TypedResults.NoContent();
     }
 
-    private async Task AuthenticateUserAsync(string email)
+    // Helper functions
+    private async Task AuthenticateUserAsync(int userId, string email)
     {
-        var claims = new List<Claim> { new Claim(ClaimTypes.Email, email) };
+        var claims = new List<Claim> 
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
+            new Claim(ClaimTypes.Email, email) 
+        };
+
         var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
 
         var authProperties = new AuthenticationProperties
