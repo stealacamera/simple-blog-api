@@ -1,6 +1,5 @@
 ﻿using System.Text.Json.Serialization;
 using Ardalis.SmartEnum.SystemTextJson;
-using Blog.Application.Common.Validation;
 using Blog.Domain.Common.Enums;
 using FluentValidation;
 
