@@ -11,4 +11,8 @@ internal class PostCategoriesRepository : BaseRepository<PostCategory>, IPostCat
     public async Task<bool> DoesCategoryHavePostsAsync(int categoryId, CancellationToken cancellationToken)
         => await _untrackedSet.Where(e => e.CategoryId == categoryId)
                               .AnyAsync(cancellationToken);
+
+    public async Task<IEnumerable<PostCategory>> GetAllForPostAsync(int postId, CancellationToken cancellationToken)
+        => await _untrackedSet.Where(e => e.PostId == postId)
+                              .ToListAsync(cancellationToken);
 }

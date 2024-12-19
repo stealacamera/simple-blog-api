@@ -1,4 +1,5 @@
-﻿using Blog.Application.Abstractions;
+﻿using System.Threading;
+using Blog.Application.Abstractions;
 using Blog.Application.Abstractions.Services;
 using Blog.Application.Common.DTOs;
 using Blog.Application.Common.Exceptions;
@@ -38,6 +39,65 @@ internal sealed class PostsService : BaseService, IPostsService
             newPost.Id, newPost.Title, newPost.Content,
             new PostStatus(request.Status), newPost.CreatedAt, newPost.PublishedAt,
             postCategories);
+    }
+
+    public async Task<IList<Post>> GetAllAsync(
+        int? requesterId = null,
+        string? filterByTitle = null, 
+        string? filterByContent = null, 
+        DateOnly? filterByPublicationDate = null, 
+        CancellationToken cancellationToken = default)
+    {
+        if(requesterId.HasValue)
+        {
+            // Validate user exists
+            if(!await _workUnit.UsersRepository.DoesInstanceExistAsync(requesterId.Value, cancellationToken))
+                throw new UnauthorizedException();
+        }
+
+        var posts = await _workUnit.PostsRepository
+                                   .GetAllAsync(
+                                        filterByTitle, filterByContent,
+                                        /* Show only published posts to non-users */ requesterId.HasValue ? null : PostStatuses.Public, 
+                                        filterByPublicationDate, cancellationToken);
+
+        return ConvertPostEntitiesAsync(posts, cancellationToken);
+    }
+
+    // Helper methods
+    private IList<Post> ConvertPostEntitiesAsync(IEnumerable<Domain.Entities.Post> entities, CancellationToken cancellationToken)
+    {
+        Dictionary<int, Category> categoryDtos = new Dictionary<int, Category>();
+
+        return entities.Select(async e =>
+                        {
+                            var postCategoriesDtos = new List<Category>();
+                            var postCategoriesEntities = await _workUnit.PostCategoriesRepository
+                                                                        .GetAllForPostAsync(e.Id, cancellationToken);
+
+                            // Store category DTOs so as not to repeat requests to the database
+                            foreach (var postCategory in postCategoriesEntities)
+                            {
+                                if (!categoryDtos.ContainsKey(postCategory.CategoryId))
+                                {
+                                    var category = (await _workUnit.CategoriesRepository
+                                                                  .GetByIdAsync(postCategory.CategoryId, cancellationToken))!;
+
+                                    categoryDtos.Add(
+                                        postCategory.CategoryId,
+                                        new(category.Id, category.Name, category.Description));
+                                }
+
+                                postCategoriesDtos.Add(categoryDtos[postCategory.CategoryId]);
+                            }
+
+                            return new Post(
+                                e.Id, e.Title, e.Content,
+                                new(PostStatuses.FromId(e.PostStatusId)),
+                                e.CreatedAt, e.PublishedAt, postCategoriesDtos);
+                        })
+                       .Select(e => e.Result)
+                       .ToList();
     }
 
     private async Task<IEnumerable<Domain.Entities.Category>> ValidateRequestAsync(
