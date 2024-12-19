@@ -2,7 +2,7 @@
 using Blog.Application.Abstractions.Services;
 using Blog.Application.Common.DTOs;
 using Blog.Application.Common.Exceptions;
-using Blog.Application.Common.Requests;
+using Blog.Application.Common.Requests.CategoryRequests;
 using FluentValidation;
 using FluentValidation.Results;
 

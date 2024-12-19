@@ -13,6 +13,7 @@ public interface IBaseSimpleRepository<TEntity, TKey> : IBaseRepository<TEntity>
     where TKey : struct, IComparable<TKey>
 {
     Task<TEntity?> GetByIdAsync(TKey id, CancellationToken cancellationToken = default);
+    Task<bool> DoesInstanceExistAsync(TKey id, CancellationToken cancellationToken = default);
 }
 
 public interface IBaseIntRepository<T> : IBaseSimpleRepository<T, int>

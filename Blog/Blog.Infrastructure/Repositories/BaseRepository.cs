@@ -28,6 +28,9 @@ internal abstract class BaseSimpleRepository<TEntity, TKey> : BaseRepository<TEn
 {
     protected BaseSimpleRepository(AppDbContext dbContext) : base(dbContext) { }
 
+    public async Task<bool> DoesInstanceExistAsync(TKey id, CancellationToken cancellationToken = default)
+        => await GetByIdAsync(id, cancellationToken) != null;
+
     public async Task<TEntity?> GetByIdAsync(TKey id, CancellationToken cancellationToken = default)
         => await _set.FindAsync(id, cancellationToken);
 }

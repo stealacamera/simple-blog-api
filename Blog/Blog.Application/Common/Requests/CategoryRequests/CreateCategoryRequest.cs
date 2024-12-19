@@ -1,6 +1,6 @@
 ﻿using FluentValidation;
 
-namespace Blog.Application.Common.Requests;
+namespace Blog.Application.Common.Requests.CategoryRequests;
 
 public record CreateCategoryRequest(string Name, string Description);
 

@@ -14,4 +14,8 @@ internal sealed class CategoriesRepository : BaseIntRepository<Category>, ICateg
 
     public async Task<IEnumerable<Category>> GetAllAsync(CancellationToken cancellationToken = default)
         => await _untrackedSet.ToListAsync(cancellationToken);
+
+    public async Task<IEnumerable<Category>> GetAllInstancesAsync(int[] ids, CancellationToken cancellationToken = default)
+        => await _untrackedSet.Where(e => ids.Contains(e.Id))
+                              .ToListAsync(cancellationToken);
 }   
