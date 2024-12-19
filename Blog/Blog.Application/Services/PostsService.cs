@@ -35,39 +35,94 @@ internal sealed class PostsService : BaseService, IPostsService
             postCategories = await RegisterPostCategoriesAsync(newPost.Id, categories, cancellationToken);
         });
 
+        var requester = (await _workUnit.UsersRepository
+                                        .GetByIdAsync(requesterId, cancellationToken))!;
+
         return new Post(
             newPost.Id, newPost.Title, newPost.Content,
             new PostStatus(request.Status), newPost.CreatedAt, newPost.PublishedAt,
-            postCategories);
+            postCategories, new(requester.Id, requester.Username, requester.Email));
     }
 
     public async Task<IList<Post>> GetAllAsync(
         int? requesterId = null,
-        string? filterByTitle = null, 
-        string? filterByContent = null, 
-        DateOnly? filterByPublicationDate = null, 
+        string? filterByTitle = null,
+        string? filterByContent = null,
+        DateOnly? filterByPublicationDate = null,
         CancellationToken cancellationToken = default)
     {
-        if(requesterId.HasValue)
+        if (requesterId.HasValue)
         {
             // Validate user exists
-            if(!await _workUnit.UsersRepository.DoesInstanceExistAsync(requesterId.Value, cancellationToken))
+            if (!await _workUnit.UsersRepository.DoesInstanceExistAsync(requesterId.Value, cancellationToken))
                 throw new UnauthorizedException();
         }
 
         var posts = await _workUnit.PostsRepository
                                    .GetAllAsync(
                                         filterByTitle, filterByContent,
-                                        /* Show only published posts to non-users */ requesterId.HasValue ? null : PostStatuses.Public, 
+                                        /* Show only published posts to non-users */ requesterId.HasValue ? null : PostStatuses.Public,
                                         filterByPublicationDate, cancellationToken);
 
         return ConvertPostEntitiesAsync(posts, cancellationToken);
     }
 
-    // Helper methods
-    private IList<Post> ConvertPostEntitiesAsync(IEnumerable<Domain.Entities.Post> entities, CancellationToken cancellationToken)
+    public async Task<PostDetails> UpdateAsync(int id, int requesterId, UpdatePostRequest request, CancellationToken cancellationToken = default)
     {
-        Dictionary<int, Category> categoryDtos = new Dictionary<int, Category>();
+        var post = await ValidateUpdateRequestAsync(id, requesterId, cancellationToken);
+
+        if (request.Title != null)
+            post.Title = request.Title;
+        if (request.Content != null)
+            post.Content = request.Content;
+        if (request.Status != null)
+        {
+            if (PostStatuses.FromId(post.PostStatusId) == PostStatuses.Deleted)
+                throw new ChangeDeletedPostStatusException();
+
+            post.PostStatusId = request.Status.Id;
+
+            if (request.Status == PostStatuses.Public)
+                post.PublishedAt = DateTime.UtcNow;
+        }
+
+        await _workUnit.SaveChangesAsync();
+
+        var requester = (await _workUnit.UsersRepository
+                                        .GetByIdAsync(requesterId, cancellationToken))!;
+
+        return new PostDetails(
+            post.Id, post.Title, post.Content,
+            new(PostStatuses.FromId(post.PostStatusId)),
+            post.CreatedAt, post.PublishedAt,
+            new(requester.Id, requester.Username, requester.Email));
+    }
+
+    // Helper methods
+    private async Task<Domain.Entities.Post> ValidateUpdateRequestAsync(int id, int requesterId, CancellationToken cancellationToken)
+    {
+        // Validate post existence
+        var post = await _workUnit.PostsRepository.GetByIdAsync(id, cancellationToken);
+
+        if (post == null)
+            throw new EntityNotFoundException(nameof(Post));
+
+        // Validate post ownership
+        var doesRequesterId = await _workUnit.UsersRepository
+                                             .DoesInstanceExistAsync(requesterId, cancellationToken);
+
+        if (!doesRequesterId || requesterId != post.OwnerId)
+            throw new UnauthorizedException();
+
+        return post;
+    }
+
+    private IList<Post> ConvertPostEntitiesAsync(
+        IEnumerable<Domain.Entities.Post> entities, 
+        CancellationToken cancellationToken)
+    {
+        Dictionary<int, Category> categoryDtos = new();
+        Dictionary<int, User> postOwnersDtos = new();
 
         return entities.Select(async e =>
                         {
@@ -91,10 +146,18 @@ internal sealed class PostsService : BaseService, IPostsService
                                 postCategoriesDtos.Add(categoryDtos[postCategory.CategoryId]);
                             }
 
+                            // Store post owner DTOs so as not to repeat requests to the database
+                            if (!postOwnersDtos.ContainsKey(e.OwnerId))
+                            {
+                                var owner = (await _workUnit.UsersRepository.GetByIdAsync(e.OwnerId))!;
+                                postOwnersDtos.Add(e.OwnerId, new(owner.Id, owner.Username, owner.Email));
+                            }
+
                             return new Post(
                                 e.Id, e.Title, e.Content,
                                 new(PostStatuses.FromId(e.PostStatusId)),
-                                e.CreatedAt, e.PublishedAt, postCategoriesDtos);
+                                e.CreatedAt, e.PublishedAt, 
+                                postCategoriesDtos, postOwnersDtos[e.OwnerId]);
                         })
                        .Select(e => e.Result)
                        .ToList();

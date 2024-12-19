@@ -43,4 +43,17 @@ public class PostsController : BaseController
         var newPost = await _servicesManager.PostsService.CreateAsync(GetRequesterId(), request, cancellationToken);
         return TypedResults.Created(string.Empty, newPost);
     }
+
+    [HttpPatch("{id:int:min(1)}")]
+    public async Task<Ok<PostDetails>> UpdateAsync(
+        int id, 
+        UpdatePostRequest request,
+        IValidator<UpdatePostRequest> validator,
+        CancellationToken cancellationToken)
+    {
+        await validator.ValidateAndThrowAsync(request, cancellationToken);
+
+        var updatedPost = await _servicesManager.PostsService.UpdateAsync(id, GetRequesterId(), request, cancellationToken);
+        return TypedResults.Ok(updatedPost);
+    }
 }
