@@ -29,5 +29,11 @@ internal class PostConfiguration : IEntityTypeConfiguration<Post>
                .HasForeignKey(e => e.PostStatusId)
                .IsRequired()
                .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<User>()
+               .WithMany()
+               .HasForeignKey(e => e.OwnerId)
+               .IsRequired()
+               .OnDelete(DeleteBehavior.Restrict);
     }
 }

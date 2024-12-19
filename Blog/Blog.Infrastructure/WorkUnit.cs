@@ -1,6 +1,7 @@
 ﻿using Blog.Application.Abstractions;
 using Blog.Application.Abstractions.Repositories;
 using Blog.Infrastructure.Repositories;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Blog.Infrastructure;
 
@@ -12,6 +13,9 @@ internal sealed class WorkUnit : IWorkUnit
         => _dbContext = dbContext;
     public async Task SaveChangesAsync()
         => await _dbContext.SaveChangesAsync();
+
+    public async Task<IDbContextTransaction> BeginTransactionAsync()
+        => await _dbContext.Database.BeginTransactionAsync();
 
     // Repositories
     private IUsersRepository _usersRepository = null!;
@@ -41,6 +45,16 @@ internal sealed class WorkUnit : IWorkUnit
         {
             _postCategoriesRepository ??= new PostCategoriesRepository(_dbContext); 
             return _postCategoriesRepository;
+        }
+    }
+
+    private IPostsRepository _postsRepository = null!;
+    public IPostsRepository PostsRepository 
+    {
+        get 
+        { 
+            _postsRepository ??= new PostsRepository(_dbContext);
+            return _postsRepository; 
         }
     }
 }

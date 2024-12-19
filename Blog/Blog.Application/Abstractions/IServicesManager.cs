@@ -6,4 +6,5 @@ public interface IServicesManager
 {
     IUsersService UsersService { get; }
     ICategoriesService CategoriesService { get; }
+    IPostsService PostsService { get; }
 }

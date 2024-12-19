@@ -32,4 +32,14 @@ internal sealed class ServicesManager : IServicesManager
             return _categoriesService;
         }
     }
+
+    private IPostsService _postsService = null!;
+    public IPostsService PostsService
+    {
+        get
+        {
+            _postsService ??= new PostsService(_workUnit);
+            return _postsService;
+        }
+    }
 }
