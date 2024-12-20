@@ -115,30 +115,33 @@ internal sealed class PostsService : BaseService, IPostsService
                                              .Select(e => new Category(e.Id, e.Name, e.Description))
                                              .ToList();
 
-        // If the category doesn't exist or is already attached to the post, do nothing
-        // Else add category to post
-        foreach (int newCategoryId in request.CategoryIds)
+        await WrapInTransactionAsync(async () =>
         {
-            if (postCategories.Contains(newCategoryId))
-                continue;
+            // If the category doesn't exist or is already attached to the post, do nothing
+            // Else add category to post
+            foreach (int newCategoryId in request.CategoryIds)
+            {
+                if (postCategories.Contains(newCategoryId))
+                    continue;
 
-            var category = await _workUnit.CategoriesRepository
-                                          .GetByIdAsync(newCategoryId, cancellationToken);
+                var category = await _workUnit.CategoriesRepository
+                                              .GetByIdAsync(newCategoryId, cancellationToken);
 
-            if (category == null)
-                continue;
+                if (category == null)
+                    continue;
 
-            await _workUnit.PostCategoriesRepository
-                           .AddAsync(new Domain.Entities.PostCategory
-                           {
-                               CategoryId = newCategoryId,
-                               PostId = post.Id,
-                               CreatedAt = DateTime.UtcNow,
-                           });
+                await _workUnit.PostCategoriesRepository
+                               .AddAsync(new Domain.Entities.PostCategory
+                               {
+                                   CategoryId = newCategoryId,
+                                   PostId = post.Id,
+                                   CreatedAt = DateTime.UtcNow,
+                               });
 
-            await _workUnit.SaveChangesAsync();
-            categoriesDtos.Add(new(category.Id, category.Name, category.Description));
-        }
+                await _workUnit.SaveChangesAsync();
+                categoriesDtos.Add(new(category.Id, category.Name, category.Description));
+            }
+        });
 
         return await ConvertPostEntityAsync(post, categoriesDtos, cancellationToken);
     }
@@ -173,21 +176,21 @@ internal sealed class PostsService : BaseService, IPostsService
 
     // Helper methods
     private async Task<Post> ConvertPostEntityAsync(
-        Domain.Entities.Post entity, 
-        IList<Category>? categoryDtos = null, 
+        Domain.Entities.Post entity,
+        IList<Category>? categoryDtos = null,
         CancellationToken cancellationToken = default)
     {
         var poster = (await _workUnit.UsersRepository
                                      .GetByIdAsync(entity.OwnerId, cancellationToken))!;
 
-        if(categoryDtos == null)
+        if (categoryDtos == null)
         {
             var postCategories = await _workUnit.PostCategoriesRepository
                                                 .GetAllForPostAsync(entity.Id, cancellationToken);
-            
+
             var categories = await _workUnit.CategoriesRepository
                                             .GetAllInstancesAsync(
-                                                postCategories.Select(e => e.CategoryId).ToArray(), 
+                                                postCategories.Select(e => e.CategoryId).ToArray(),
                                                 cancellationToken);
 
             categoryDtos = categories.Select(e => new Category(e.Id, e.Name, e.Description))
@@ -195,8 +198,8 @@ internal sealed class PostsService : BaseService, IPostsService
         }
 
         return new Post(
-            entity.Id, entity.Title, entity.Content, 
-            new(PostStatuses.FromId(entity.PostStatusId)), 
+            entity.Id, entity.Title, entity.Content,
+            new(PostStatuses.FromId(entity.PostStatusId)),
             entity.CreatedAt, entity.PublishedAt,
             categoryDtos, new(poster.Id, poster.Username, poster.Email));
     }
