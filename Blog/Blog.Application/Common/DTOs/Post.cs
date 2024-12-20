@@ -20,11 +20,22 @@ public record PostStatus
     }
 }
 
-    public record Post(
-    int Id, 
-    string Title, 
-    string Content, 
+public record PostDetails(
+    int Id,
+    string Title,
+    string Content,
     PostStatus Status,
     DateTime CreatedAt,
     DateTime? PublishedAt,
-    IList<Category> Categories);
+    User Owner);
+
+public record Post(
+    int Id,
+    string Title,
+    string Content,
+    PostStatus Status,
+    DateTime CreatedAt,
+    DateTime? PublishedAt,
+    IList<Category> Categories,
+    User Owner) : 
+    PostDetails(Id, Title, Content, Status, CreatedAt, PublishedAt, Owner);
