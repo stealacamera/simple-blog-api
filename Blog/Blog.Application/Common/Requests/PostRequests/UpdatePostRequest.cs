@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using Blog.Domain.Common.Enums;
 using FluentValidation;
 
-namespace Blog.Application.Common.Requests;
+namespace Blog.Application.Common.Requests.PostRequests;
 
 public record UpdatePostRequest
 {

@@ -1,6 +1,6 @@
 ﻿using Blog.Application.Abstractions;
 using Blog.Application.Common.DTOs;
-using Blog.Application.Common.Requests;
+using Blog.Application.Common.Requests.PostRequests;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -54,6 +54,21 @@ public class PostsController : BaseController
         await validator.ValidateAndThrowAsync(request, cancellationToken);
 
         var updatedPost = await _servicesManager.PostsService.UpdateAsync(id, GetRequesterId(), request, cancellationToken);
+        return TypedResults.Ok(updatedPost);
+    }
+
+    [HttpPost("{id:int:min(1)}/categories")]
+    public async Task<Ok<Post>> AddCategoriesAsync(
+        int id,
+        AddCategoriesToPostRequest request,
+        IValidator<AddCategoriesToPostRequest> validator,
+        CancellationToken cancellationToken)
+    {
+        await validator.ValidateAndThrowAsync(request, cancellationToken);
+
+        var updatedPost = await _servicesManager.PostsService
+                                                .AddCategoriesToPostAsync(id, GetRequesterId(), request, cancellationToken);
+        
         return TypedResults.Ok(updatedPost);
     }
 }

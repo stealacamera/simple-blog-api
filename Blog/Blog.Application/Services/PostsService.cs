@@ -1,9 +1,8 @@
-﻿using System.Threading;
-using Blog.Application.Abstractions;
+﻿using Blog.Application.Abstractions;
 using Blog.Application.Abstractions.Services;
 using Blog.Application.Common.DTOs;
 using Blog.Application.Common.Exceptions;
-using Blog.Application.Common.Requests;
+using Blog.Application.Common.Requests.PostRequests;
 using Blog.Domain.Common.Enums;
 
 namespace Blog.Application.Services;
@@ -69,7 +68,7 @@ internal sealed class PostsService : BaseService, IPostsService
 
     public async Task<PostDetails> UpdateAsync(int id, int requesterId, UpdatePostRequest request, CancellationToken cancellationToken = default)
     {
-        var post = await ValidateUpdateRequestAsync(id, requesterId, cancellationToken);
+        var post = await ValidatePostAndOwnershipAsync(id, requesterId, cancellationToken);
 
         if (request.Title != null)
             post.Title = request.Title;
@@ -98,8 +97,62 @@ internal sealed class PostsService : BaseService, IPostsService
             new(requester.Id, requester.Username, requester.Email));
     }
 
+    public async Task<Post> AddCategoriesToPostAsync(
+        int id, 
+        int requesterId, 
+        AddCategoriesToPostRequest request, 
+        CancellationToken cancellationToken = default)
+    {
+        var post = await ValidatePostAndOwnershipAsync(id, requesterId, cancellationToken);
+        var postCategories = (await _workUnit.PostCategoriesRepository
+                                            .GetAllForPostAsync(id, cancellationToken))
+                                            .Select(e => e.CategoryId)
+                                            .ToArray();
+
+        // Retrieve existing post categories as DTOs and add as needed
+        var categoriesDtos = (await _workUnit.CategoriesRepository
+                                             .GetAllInstancesAsync(postCategories, cancellationToken))
+                                             .Select(e => new Category(e.Id, e.Name, e.Description))
+                                             .ToList();
+
+        // If the category doesn't exist or is already attached to the post, do nothing
+        // Else add category to post
+        foreach(int newCategoryId in request.CategoryIds)
+        {
+            if (postCategories.Contains(newCategoryId))
+                continue;
+
+            var category = await _workUnit.CategoriesRepository
+                                          .GetByIdAsync(newCategoryId, cancellationToken);
+
+            if (category == null)
+                continue;
+
+            await _workUnit.PostCategoriesRepository
+                           .AddAsync(new Domain.Entities.PostCategory 
+                           { 
+                               CategoryId = newCategoryId,
+                               PostId = post.Id,
+                               CreatedAt = DateTime.UtcNow,
+                           });
+
+            await _workUnit.SaveChangesAsync();
+            categoriesDtos.Add(new(category.Id, category.Name, category.Description));
+        }
+
+        var requester = (await _workUnit.UsersRepository
+                                        .GetByIdAsync(requesterId, cancellationToken))!;
+
+        return new Post(
+            post.Id, post.Title, post.Content, 
+            new(PostStatuses.FromId(post.PostStatusId)), 
+            post.CreatedAt, post.PublishedAt, 
+            categoriesDtos, new(requester.Id, requester.Username, requester.Email));
+    }
+
+
     // Helper methods
-    private async Task<Domain.Entities.Post> ValidateUpdateRequestAsync(int id, int requesterId, CancellationToken cancellationToken)
+    private async Task<Domain.Entities.Post> ValidatePostAndOwnershipAsync(int id, int requesterId, CancellationToken cancellationToken)
     {
         // Validate post existence
         var post = await _workUnit.PostsRepository.GetByIdAsync(id, cancellationToken);
