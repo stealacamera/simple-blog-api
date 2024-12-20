@@ -2,6 +2,7 @@
 using Blog.Application.Common.Exceptions;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
+using Serilog;
 
 namespace Blog.API.Common;
 
@@ -88,6 +89,8 @@ public sealed class ExceptionHandlingMiddleware : IMiddleware
             Detail = "Something went wrong in the server, try again later",
             Status = StatusCodes.Status500InternalServerError
         };
+
+        Log.Error(ex, "API_ERROR");
 
         context.Response.StatusCode = details.Status.Value;
         await context.Response.WriteAsJsonAsync(details);
