@@ -7,6 +7,7 @@ public interface IPostsService
 {
     Task<Post> CreateAsync(int requesterId, CreatePostRequest request, CancellationToken cancellationToken = default);
     Task<PostDetails> UpdateAsync(int id, int requesterId, UpdatePostRequest request, CancellationToken cancellationToken = default);
+    Task<PostDetails> DeleteAsync(int id, int requesterId, CancellationToken cancellationToken = default);
 
     Task<Post> AddCategoriesToPostAsync(int id, int requesterId, UpdateCategoriesForPostRequest request, CancellationToken cancellationToken = default);
     Task<Post> RemoveCategoriesFromPostAsync(int id, int requesterId, UpdateCategoriesForPostRequest request, CancellationToken cancellationToken = default);
