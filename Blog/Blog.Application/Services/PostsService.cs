@@ -97,6 +97,23 @@ internal sealed class PostsService : BaseService, IPostsService
             new(requester.Id, requester.Username, requester.Email));
     }
 
+    public async Task<PostDetails> DeleteAsync(int id, int requesterId, CancellationToken cancellationToken = default)
+    {
+        var post = await ValidatePostAndOwnershipAsync(id, requesterId, cancellationToken);
+
+        post.PostStatusId = PostStatuses.Deleted.Id;
+        await _workUnit.SaveChangesAsync();
+
+        var requester = (await _workUnit.UsersRepository
+                                        .GetByIdAsync(requesterId, cancellationToken))!;
+
+        return new PostDetails(
+            post.Id, post.Title, post.Content, 
+            new(PostStatuses.FromId(post.PostStatusId)), 
+            post.CreatedAt, post.PublishedAt, 
+            new(requester.Id, requester.Username, requester.Email));
+    }
+
     public async Task<Post> AddCategoriesToPostAsync(
         int id,
         int requesterId,

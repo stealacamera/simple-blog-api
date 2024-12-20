@@ -57,6 +57,13 @@ public class PostsController : BaseController
         return TypedResults.Ok(updatedPost);
     }
 
+    [HttpDelete("{id:int:min(1)}")]
+    public async Task<NoContent> DeleteAsync(int id, CancellationToken cancellationToken)
+    {
+        await _servicesManager.PostsService.DeleteAsync(id, GetRequesterId(), cancellationToken);
+        return TypedResults.NoContent();
+    }
+
     [HttpPost("{id:int:min(1)}/categories")]
     public async Task<Ok<Post>> AddCategoriesAsync(
         int id,
