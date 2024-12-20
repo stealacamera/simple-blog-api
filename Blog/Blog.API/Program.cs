@@ -1,3 +1,4 @@
+using Blog.API.Common;
 using Blog.Application;
 using Blog.Infrastructure;
 using MicroElements.Swashbuckle.FluentValidation.AspNetCore;
@@ -6,6 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.RegisterInfrastructureServices(builder.Configuration);
 builder.Services.RegisterApplicationServices();
+builder.Services.RegisterApiServices();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -28,5 +30,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.Run();
