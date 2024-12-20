@@ -60,8 +60,8 @@ public class PostsController : BaseController
     [HttpPost("{id:int:min(1)}/categories")]
     public async Task<Ok<Post>> AddCategoriesAsync(
         int id,
-        AddCategoriesToPostRequest request,
-        IValidator<AddCategoriesToPostRequest> validator,
+        UpdateCategoriesForPostRequest request,
+        IValidator<UpdateCategoriesForPostRequest> validator,
         CancellationToken cancellationToken)
     {
         await validator.ValidateAndThrowAsync(request, cancellationToken);
@@ -69,6 +69,21 @@ public class PostsController : BaseController
         var updatedPost = await _servicesManager.PostsService
                                                 .AddCategoriesToPostAsync(id, GetRequesterId(), request, cancellationToken);
         
+        return TypedResults.Ok(updatedPost);
+    }
+
+    [HttpDelete("{id:int:min(1)}/categories")]
+    public async Task<Ok<Post>> RemoveCategoriesAsync(
+        int id,
+        UpdateCategoriesForPostRequest request,
+        IValidator<UpdateCategoriesForPostRequest> validator,
+        CancellationToken cancellationToken)
+    {
+        await validator.ValidateAndThrowAsync(request, cancellationToken);
+
+        var updatedPost = await _servicesManager.PostsService
+                                                .RemoveCategoriesFromPostAsync(id, GetRequesterId(), request, cancellationToken);
+
         return TypedResults.Ok(updatedPost);
     }
 }
