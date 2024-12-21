@@ -3,7 +3,7 @@ using Ardalis.SmartEnum.SystemTextJson;
 using Blog.Domain.Common.Enums;
 using FluentValidation;
 
-namespace Blog.Application.Common.Requests.PostRequests;
+namespace Blog.Application.Common.DTOs.Requests.PostRequests;
 
 public record CreatePostRequest
 {

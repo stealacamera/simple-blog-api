@@ -1,8 +1,8 @@
 ﻿using Blog.Application.Abstractions;
 using Blog.Application.Abstractions.Services;
 using Blog.Application.Common.DTOs;
+using Blog.Application.Common.DTOs.Requests;
 using Blog.Application.Common.Exceptions;
-using Blog.Application.Common.Requests;
 using FluentValidation;
 using FluentValidation.Results;
 using Microsoft.AspNetCore.Identity;

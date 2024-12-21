@@ -1,6 +1,6 @@
 ﻿using FluentValidation;
 
-namespace Blog.Application.Common.Requests.CategoryRequests;
+namespace Blog.Application.Common.DTOs.Requests.CategoryRequests;
 
 public record UpdateCategoryRequest(string? Name = null, string? Description = null);
 

@@ -1,6 +1,6 @@
 ﻿using FluentValidation;
 
-namespace Blog.Application.Common.Requests;
+namespace Blog.Application.Common.DTOs.Requests;
 
 public record CreateUserRequest(string Username, string Email, string Password);
 

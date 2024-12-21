@@ -12,7 +12,7 @@ builder.RegisterApiServices();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(StartupUtils.RegisterSwaggerOptions);
 builder.Services.AddFluentValidationRulesToSwagger();
 
 var app = builder.Build();
