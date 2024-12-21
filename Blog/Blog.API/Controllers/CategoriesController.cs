@@ -3,8 +3,10 @@ using Blog.Application.Common.DTOs;
 using Blog.Application.Common.DTOs.Requests.CategoryRequests;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace Blog.API.Controllers;
 
@@ -17,6 +19,8 @@ public class CategoriesController : BaseController
 
     [HttpGet]
     [AllowAnonymous]
+    [SwaggerOperation("Retrieves all existing categories")]
+    [SwaggerResponse(StatusCodes.Status200OK, type: typeof(IList<Category>))]
     public async Task<Ok<IList<Category>>> GetAllAsync(CancellationToken cancellationToken)
     {
         var categories = await _servicesManager.CategoriesService
@@ -26,6 +30,10 @@ public class CategoriesController : BaseController
     }
 
     [HttpPost]
+    [SwaggerOperation("Create a new category")]
+    [SwaggerResponse(StatusCodes.Status201Created, "New category was created successfully", typeof(Category))]
+    [SwaggerResponse(StatusCodes.Status401Unauthorized, type: typeof(ProblemDetails))]
+    [SwaggerResponse(StatusCodes.Status400BadRequest, "Category name already exists, or request is invalid", typeof(ValidationProblemDetails))]
     public async Task<Created<Category>> CreateAsync(
         CreateCategoryRequest request, 
         IValidator<CreateCategoryRequest> validator, 
@@ -38,6 +46,11 @@ public class CategoriesController : BaseController
     }
 
     [HttpPatch("{id:int:min(1)}")]
+    [SwaggerOperation("Update an existing category")]
+    [SwaggerResponse(StatusCodes.Status200OK, "Category was updated successfully", typeof(Category))]
+    [SwaggerResponse(StatusCodes.Status400BadRequest, "Invalid request", typeof(ValidationProblemDetails))]
+    [SwaggerResponse(StatusCodes.Status401Unauthorized, type: typeof(ProblemDetails))]
+    [SwaggerResponse(StatusCodes.Status404NotFound, "Category could not be found", typeof(ProblemDetails))]
     public async Task<Ok<Category>> UpdateAsync(
         int id,
         UpdateCategoryRequest request,
@@ -53,6 +66,10 @@ public class CategoriesController : BaseController
     }
 
     [HttpDelete("{id:int:min(1)}")]
+    [SwaggerOperation("Delete an existing category")]
+    [SwaggerResponse(StatusCodes.Status400BadRequest, "Invalid request or existing posts are linked to the category", typeof(ValidationProblemDetails))]
+    [SwaggerResponse(StatusCodes.Status401Unauthorized, type: typeof(ProblemDetails))]
+    [SwaggerResponse(StatusCodes.Status404NotFound, "Category could not be found", typeof(ProblemDetails))]
     public async Task<NoContent> DeleteAsync(int id, CancellationToken cancellationToken)
     {
         await _servicesManager.CategoriesService.DeleteAsync(id, cancellationToken);
