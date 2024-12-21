@@ -18,6 +18,8 @@ public record PostStatus
         Value = status.Value;
         Name = status.Name;
     }
+
+    public PostStatus(sbyte statusId) : this(PostStatuses.FromId(statusId)) { }
 }
 
 public record PostDetails(
@@ -37,5 +39,5 @@ public record Post(
     DateTime CreatedAt,
     DateTime? PublishedAt,
     IList<Category> Categories,
-    User Owner) : 
-    PostDetails(Id, Title, Content, Status, CreatedAt, PublishedAt, Owner);
+    User Owner) 
+    : PostDetails(Id, Title, Content, Status, CreatedAt, PublishedAt, Owner);

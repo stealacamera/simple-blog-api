@@ -7,5 +7,5 @@ public interface ICategoriesRepository : IBaseIntRepository<Category>
     Task<IEnumerable<Category>> GetAllAsync(CancellationToken cancellationToken = default);
 
     Task<bool> DoesNameExistAsync(string name, CancellationToken cancellationToken = default);
-    Task<IEnumerable<Category>> GetAllInstancesAsync(int[] ids, CancellationToken cancellationToken = default);
+    Task<IEnumerable<Category>> GetInstancesAsync(int[] ids, CancellationToken cancellationToken = default);
 }

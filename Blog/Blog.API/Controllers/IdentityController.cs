@@ -1,13 +1,14 @@
 ﻿using System.Security.Claims;
 using Blog.Application.Abstractions;
 using Blog.Application.Common.DTOs;
-using Blog.Application.Common.Requests;
+using Blog.Application.Common.DTOs.Requests;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 
 namespace Blog.API.Controllers;
 
@@ -18,6 +19,9 @@ public class IdentityController : BaseController
     public IdentityController(IServicesManager servicesManager) : base(servicesManager) { }
 
     [HttpPost("register")]
+    [SwaggerOperation("Create user account")]
+    [SwaggerResponse(StatusCodes.Status201Created, "Account created successfully", typeof(User))]
+    [SwaggerResponse(StatusCodes.Status400BadRequest, "Invalid request", typeof(ValidationProblemDetails))]
     public async Task<Created<User>> RegisterAsync(
         CreateUserRequest request, 
         IValidator<CreateUserRequest> validator, 
@@ -32,6 +36,9 @@ public class IdentityController : BaseController
     }
 
     [HttpPost("login")]
+    [SwaggerOperation("Log into account")]
+    [SwaggerResponse(StatusCodes.Status200OK, "Logged into account successfully")]
+    [SwaggerResponse(StatusCodes.Status400BadRequest, "Invalid request or wrong credentials")]
     public async Task<Ok> LoginAsync(
         ValidateCredentialsRequest request, 
         IValidator<ValidateCredentialsRequest> validator, 
@@ -48,6 +55,9 @@ public class IdentityController : BaseController
 
     [HttpPost("logout")]
     [Authorize]
+    [SwaggerOperation("Log out of account")]
+    [SwaggerResponse(StatusCodes.Status204NoContent, "Logged out successfully")]
+    [SwaggerResponse(StatusCodes.Status401Unauthorized, type: typeof(ProblemDetails))]
     public async Task<NoContent> LogoutAsync()
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);

@@ -1,4 +1,5 @@
 ﻿using Serilog;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Blog.API.Common;
 
@@ -17,4 +18,7 @@ public static class StartupUtils
         // Registering services
         builder.Services.AddTransient<ExceptionHandlingMiddleware>();
     }
+
+    public static void RegisterSwaggerOptions(SwaggerGenOptions options)
+        => options.EnableAnnotations();
 }
