@@ -1,6 +1,6 @@
 ﻿using Blog.Application.Abstractions;
 using Blog.Application.Common.DTOs;
-using Blog.Application.Common.Requests.CategoryRequests;
+using Blog.Application.Common.DTOs.Requests.CategoryRequests;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.HttpResults;

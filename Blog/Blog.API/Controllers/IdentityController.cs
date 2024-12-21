@@ -1,7 +1,7 @@
 ﻿using System.Security.Claims;
 using Blog.Application.Abstractions;
 using Blog.Application.Common.DTOs;
-using Blog.Application.Common.Requests;
+using Blog.Application.Common.DTOs.Requests;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;

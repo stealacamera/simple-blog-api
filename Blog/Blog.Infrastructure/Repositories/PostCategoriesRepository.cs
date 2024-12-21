@@ -8,6 +8,17 @@ internal class PostCategoriesRepository : BaseRepository<PostCategory>, IPostCat
 {
     public PostCategoriesRepository(AppDbContext dbContext) : base(dbContext) { }
 
+    public async Task AddEntitiesAsync(PostCategory[] entities, CancellationToken cancellationToken)
+        => await _set.AddRangeAsync(entities, cancellationToken);
+
+    public async Task DeleteAllForPostAsync(int postId, CancellationToken cancellationToken)
+        => await _set.Where(e => e.PostId == postId)
+                     .ExecuteDeleteAsync(cancellationToken);
+
+    public async Task DeleteInstancesForPostAsync(int postId, int[] categoryIds, CancellationToken cancellationToken)
+        => await _set.Where(e => e.PostId == postId && categoryIds.Contains(e.CategoryId))
+                     .ExecuteDeleteAsync(cancellationToken);
+
     public async Task<bool> DoesCategoryHavePostsAsync(int categoryId, CancellationToken cancellationToken)
         => await _untrackedSet.Where(e => e.CategoryId == categoryId)
                               .AnyAsync(cancellationToken);

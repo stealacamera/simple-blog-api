@@ -1,8 +1,8 @@
 ﻿using Blog.Application.Abstractions;
 using Blog.Application.Abstractions.Services;
 using Blog.Application.Common.DTOs;
+using Blog.Application.Common.DTOs.Requests.PostRequests;
 using Blog.Application.Common.Exceptions;
-using Blog.Application.Common.Requests.PostRequests;
 using Blog.Domain.Common.Enums;
 
 namespace Blog.Application.Services;
@@ -11,11 +11,14 @@ internal sealed class PostsService : BaseService, IPostsService
 {
     public PostsService(IWorkUnit workUnit) : base(workUnit) { }
 
-    public async Task<Post> CreateAsync(int requesterId, CreatePostRequest request, CancellationToken cancellationToken = default)
+    public async Task<Post> CreateAsync(
+        int requesterId, 
+        CreatePostRequest request, 
+        CancellationToken cancellationToken = default)
     {
-        var categories = await ValidateRequestAsync(requesterId, request, cancellationToken);
-        IList<Category> postCategories = new List<Category>();
+        var categories = await ValidateCreateRequestAsync(requesterId, request, cancellationToken);
 
+        IList<Category> postCategories = new List<Category>();
         var newPost = new Domain.Entities.Post
         {
             Title = request.Title,
@@ -26,6 +29,7 @@ internal sealed class PostsService : BaseService, IPostsService
             PublishedAt = request.Status == PostStatuses.Public ? DateTime.UtcNow : null
         };
 
+        // Create post & register categories for post
         await WrapInTransactionAsync(async () =>
         {
             await _workUnit.PostsRepository.AddAsync(newPost, cancellationToken);
@@ -34,13 +38,7 @@ internal sealed class PostsService : BaseService, IPostsService
             postCategories = await RegisterPostCategoriesAsync(newPost.Id, categories, cancellationToken);
         });
 
-        var requester = (await _workUnit.UsersRepository
-                                        .GetByIdAsync(requesterId, cancellationToken))!;
-
-        return new Post(
-            newPost.Id, newPost.Title, newPost.Content,
-            new PostStatus(request.Status), newPost.CreatedAt, newPost.PublishedAt,
-            postCategories, new(requester.Id, requester.Username, requester.Email));
+        return await ConvertPostEntityAsync(newPost, postCategories, cancellationToken);
     }
 
     public async Task<IList<Post>> GetAllAsync(
@@ -66,10 +64,15 @@ internal sealed class PostsService : BaseService, IPostsService
         return ConvertPostEntitiesAsync(posts, cancellationToken);
     }
 
-    public async Task<PostDetails> UpdateAsync(int id, int requesterId, UpdatePostRequest request, CancellationToken cancellationToken = default)
+    public async Task<PostDetails> UpdateAsync(
+        int id,
+        int requesterId,
+        UpdatePostRequest request,
+        CancellationToken cancellationToken = default)
     {
         var post = await ValidatePostAndOwnershipAsync(id, requesterId, cancellationToken);
 
+        // Update post
         if (request.Title != null)
             post.Title = request.Title;
         if (request.Content != null)
@@ -77,23 +80,23 @@ internal sealed class PostsService : BaseService, IPostsService
         if (request.Status != null)
         {
             if (PostStatuses.FromId(post.PostStatusId) == PostStatuses.Deleted)
-                throw new ChangeDeletedPostStatusException();
-
-            post.PostStatusId = request.Status.Id;
+                throw new ChangeDeletedPostStatusException(); // Don't allow a post to be un-deleted
 
             if (request.Status == PostStatuses.Public)
                 post.PublishedAt = DateTime.UtcNow;
+
+            post.PostStatusId = request.Status.Id;
         }
 
         await _workUnit.SaveChangesAsync();
 
+        // Return edited post
         var requester = (await _workUnit.UsersRepository
                                         .GetByIdAsync(requesterId, cancellationToken))!;
 
         return new PostDetails(
             post.Id, post.Title, post.Content,
-            new(PostStatuses.FromId(post.PostStatusId)),
-            post.CreatedAt, post.PublishedAt,
+            new(post.PostStatusId), post.CreatedAt, post.PublishedAt,
             new(requester.Id, requester.Username, requester.Email));
     }
 
@@ -101,16 +104,24 @@ internal sealed class PostsService : BaseService, IPostsService
     {
         var post = await ValidatePostAndOwnershipAsync(id, requesterId, cancellationToken);
 
-        post.PostStatusId = PostStatuses.Deleted.Id;
-        await _workUnit.SaveChangesAsync();
+        await WrapInTransactionAsync(async () =>
+        {
+            // Remove post categories
+            await _workUnit.PostCategoriesRepository.DeleteAllForPostAsync(post.Id, cancellationToken);
+            await _workUnit.SaveChangesAsync();
 
+            // Update post status
+            post.PostStatusId = PostStatuses.Deleted.Id;
+            await _workUnit.SaveChangesAsync();
+        });
+
+        // Return edited post
         var requester = (await _workUnit.UsersRepository
                                         .GetByIdAsync(requesterId, cancellationToken))!;
 
         return new PostDetails(
-            post.Id, post.Title, post.Content, 
-            new(PostStatuses.FromId(post.PostStatusId)), 
-            post.CreatedAt, post.PublishedAt, 
+            post.Id, post.Title, post.Content,
+            new(post.PostStatusId), post.CreatedAt, post.PublishedAt,
             new(requester.Id, requester.Username, requester.Email));
     }
 
@@ -121,46 +132,34 @@ internal sealed class PostsService : BaseService, IPostsService
         CancellationToken cancellationToken = default)
     {
         var post = await ValidatePostAndOwnershipAsync(id, requesterId, cancellationToken);
-        var postCategories = (await _workUnit.PostCategoriesRepository
+
+        var existingPostCategories = (await _workUnit.PostCategoriesRepository
                                             .GetAllForPostAsync(id, cancellationToken))
                                             .Select(e => e.CategoryId)
                                             .ToArray();
 
-        // Retrieve existing post categories as DTOs and add as needed
-        var categoriesDtos = (await _workUnit.CategoriesRepository
-                                             .GetAllInstancesAsync(postCategories, cancellationToken))
-                                             .Select(e => new Category(e.Id, e.Name, e.Description))
-                                             .ToList();
+        var postCategoriesToAdd = new List<Domain.Entities.PostCategory>();
 
-        await WrapInTransactionAsync(async () =>
+        foreach (var newCategoryId in request.CategoryIds)
         {
-            // If the category doesn't exist or is already attached to the post, do nothing
-            // Else add category to post
-            foreach (int newCategoryId in request.CategoryIds)
+            // If the category doesn't exist or is already attached to post, do nothing
+            // Otherwise, add category to post
+            if (existingPostCategories.Contains(newCategoryId) || 
+                !await _workUnit.CategoriesRepository.DoesInstanceExistAsync(newCategoryId, cancellationToken))
+                continue;
+
+            postCategoriesToAdd.Add(new Domain.Entities.PostCategory
             {
-                if (postCategories.Contains(newCategoryId))
-                    continue;
+                CategoryId = newCategoryId,
+                PostId = post.Id,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
 
-                var category = await _workUnit.CategoriesRepository
-                                              .GetByIdAsync(newCategoryId, cancellationToken);
+        await _workUnit.PostCategoriesRepository.AddEntitiesAsync(postCategoriesToAdd.ToArray(), cancellationToken);
+        await _workUnit.SaveChangesAsync();
 
-                if (category == null)
-                    continue;
-
-                await _workUnit.PostCategoriesRepository
-                               .AddAsync(new Domain.Entities.PostCategory
-                               {
-                                   CategoryId = newCategoryId,
-                                   PostId = post.Id,
-                                   CreatedAt = DateTime.UtcNow,
-                               });
-
-                await _workUnit.SaveChangesAsync();
-                categoriesDtos.Add(new(category.Id, category.Name, category.Description));
-            }
-        });
-
-        return await ConvertPostEntityAsync(post, categoriesDtos, cancellationToken);
+        return await ConvertPostEntityAsync(post, cancellationToken: cancellationToken);
     }
 
     public async Task<Post> RemoveCategoriesFromPostAsync(
@@ -171,21 +170,17 @@ internal sealed class PostsService : BaseService, IPostsService
     {
         var post = await ValidatePostAndOwnershipAsync(id, requesterId, cancellationToken);
 
-        var postCategories = (await _workUnit.PostCategoriesRepository
+        var existingPostCategories = (await _workUnit.PostCategoriesRepository
                                              .GetAllForPostAsync(id, cancellationToken))
-                                             .ToDictionary(e => e.CategoryId);
+                                             .Select(e => e.CategoryId)
+                                             .ToList();
 
-        await WrapInTransactionAsync(async () =>
-        {
-            foreach (var categoryId in request.CategoryIds)
-            {
-                if (!postCategories.ContainsKey(categoryId))
-                    continue;
+        var postCategoriesToRemove = request.CategoryIds.Intersect(existingPostCategories);
 
-                _workUnit.PostCategoriesRepository.Delete(postCategories[categoryId]);
-                await _workUnit.SaveChangesAsync();
-            }
-        });
+        await _workUnit.PostCategoriesRepository
+                       .DeleteInstancesForPostAsync(post.Id, postCategoriesToRemove.ToArray(), cancellationToken);
+        
+        await _workUnit.SaveChangesAsync();
 
         return await ConvertPostEntityAsync(post, cancellationToken: cancellationToken);
     }
@@ -206,7 +201,7 @@ internal sealed class PostsService : BaseService, IPostsService
                                                 .GetAllForPostAsync(entity.Id, cancellationToken);
 
             var categories = await _workUnit.CategoriesRepository
-                                            .GetAllInstancesAsync(
+                                            .GetInstancesAsync(
                                                 postCategories.Select(e => e.CategoryId).ToArray(),
                                                 cancellationToken);
 
@@ -226,7 +221,7 @@ internal sealed class PostsService : BaseService, IPostsService
         // Validate post existence
         var post = await _workUnit.PostsRepository.GetByIdAsync(id, cancellationToken);
 
-        if (post == null)
+        if (post == null || post.PostStatusId == PostStatuses.Deleted.Id)
             throw new EntityNotFoundException(nameof(Post));
 
         // Validate post ownership
@@ -285,7 +280,7 @@ internal sealed class PostsService : BaseService, IPostsService
                        .ToList();
     }
 
-    private async Task<IEnumerable<Domain.Entities.Category>> ValidateRequestAsync(
+    private async Task<IEnumerable<Domain.Entities.Category>> ValidateCreateRequestAsync(
         int requesterId,
         CreatePostRequest request,
         CancellationToken cancellationToken)
@@ -296,12 +291,13 @@ internal sealed class PostsService : BaseService, IPostsService
 
         // Ensure all categories exist
         var categories = await _workUnit.CategoriesRepository
-                                        .GetAllInstancesAsync(request.CategoryIds.ToArray(), cancellationToken);
+                                        .GetInstancesAsync(request.CategoryIds.ToArray(), cancellationToken);
 
         if (categories.Count() < request.CategoryIds.Count)
         {
             var missingCategoryIds = request.CategoryIds
-                                            .Except(categories.Select(e => e.Id).ToArray());
+                                            .Except(categories.Select(e => e.Id)
+                                            .ToArray());
 
             throw new EntityNotFoundException($"Categories with id(s) {string.Join(", ", missingCategoryIds)}");
         }
@@ -314,25 +310,25 @@ internal sealed class PostsService : BaseService, IPostsService
         IEnumerable<Domain.Entities.Category> categories,
         CancellationToken cancellationToken)
     {
+        List<Domain.Entities.PostCategory> postCategoryEntities = new();
         List<Category> postCategories = new();
 
         foreach (var category in categories)
         {
-            // Get category DTO
             postCategories.Add(new Category(category.Id, category.Name, category.Description));
-
-            // Register post category entity
-            var postCategory = new Domain.Entities.PostCategory
+            
+            postCategoryEntities.Add(new Domain.Entities.PostCategory
             {
                 CategoryId = category.Id,
                 PostId = postId,
                 CreatedAt = DateTime.UtcNow,
-            };
-
-            await _workUnit.PostCategoriesRepository.AddAsync(postCategory, cancellationToken);
-            await _workUnit.SaveChangesAsync();
+            });
         }
 
+        await _workUnit.PostCategoriesRepository
+                       .AddEntitiesAsync(postCategoryEntities.ToArray(), cancellationToken);
+        
+        await _workUnit.SaveChangesAsync();
         return postCategories;
     }
 }
