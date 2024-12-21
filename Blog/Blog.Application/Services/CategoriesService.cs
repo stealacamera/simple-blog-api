@@ -1,8 +1,8 @@
 ﻿using Blog.Application.Abstractions;
 using Blog.Application.Abstractions.Services;
 using Blog.Application.Common.DTOs;
+using Blog.Application.Common.DTOs.Requests.CategoryRequests;
 using Blog.Application.Common.Exceptions;
-using Blog.Application.Common.Requests.CategoryRequests;
 using FluentValidation;
 using FluentValidation.Results;
 
@@ -16,18 +16,15 @@ internal sealed class CategoriesService : BaseService, ICategoriesService
 
     public async Task<IList<Category>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var categories = await _workUnit.CategoriesRepository
-                                        .GetAllAsync(cancellationToken);
-
-        return categories.Select(e => new Category(e.Id, e.Name, e.Description))
-                         .ToList();
+        return (await _workUnit.CategoriesRepository
+                               .GetAllAsync(cancellationToken))
+                               .Select(e => new Category(e.Id, e.Name, e.Description))
+                               .ToList();
     }
 
     public async Task<Category> CreateAsync(CreateCategoryRequest request, CancellationToken cancellationToken)
     {
-        // Validate name uniqeness
-        if (await _workUnit.CategoriesRepository.DoesNameExistAsync(request.Name, cancellationToken))
-            throw new ValidationException([new ValidationFailure(nameof(request.Name), "Category name already exists")]);
+        await ValidateCategoryNameUniquenessAsync(request.Name, nameof(request.Name), cancellationToken);
 
         // Create new category
         var category = new Domain.Entities.Category
@@ -47,6 +44,7 @@ internal sealed class CategoriesService : BaseService, ICategoriesService
     {
         var category = await _workUnit.CategoriesRepository
                                       .GetByIdAsync(id, cancellationToken);
+
         // Check if entity exists
         if (category == null)
             throw new EntityNotFoundException(nameof(Category));
@@ -54,12 +52,9 @@ internal sealed class CategoriesService : BaseService, ICategoriesService
         // Change attributes if given
         if (request.Name != null)
         {
-            if (await _workUnit.CategoriesRepository.DoesNameExistAsync(request.Name))
-                throw new ValidationException([new ValidationFailure(nameof(request.Name), "Category name already exists")]);
-
+            await ValidateCategoryNameUniquenessAsync(request.Name, nameof(request.Name), cancellationToken);
             category.Name = request.Name;
         } 
-
         if(request.Description != null)
             category.Description = request.Description;
 
@@ -74,12 +69,18 @@ internal sealed class CategoriesService : BaseService, ICategoriesService
 
         if(category == null)
             throw new EntityNotFoundException(nameof(Category));
-
-        // Don't proceed if category has posts
-        if (await _workUnit.PostCategoriesRepository.DoesCategoryHavePostsAsync(id, cancellationToken))
-            throw new CategoryHasPostsException();
+        else if (await _workUnit.PostCategoriesRepository.DoesCategoryHavePostsAsync(id, cancellationToken))
+            throw new CategoryHasPostsException(); // Don't proceed if category has posts
 
         _workUnit.CategoriesRepository.Delete(category);
         await _workUnit.SaveChangesAsync();
+    }
+
+
+    // Helper methods
+    private async Task ValidateCategoryNameUniquenessAsync(string name, string propertyName, CancellationToken cancellationToken)
+    {
+        if (await _workUnit.CategoriesRepository.DoesNameExistAsync(name))
+            throw new ValidationException([new ValidationFailure(nameof(propertyName), "Category name already exists")]);
     }
 }

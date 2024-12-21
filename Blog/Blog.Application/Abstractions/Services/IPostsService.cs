@@ -1,5 +1,5 @@
 ﻿using Blog.Application.Common.DTOs;
-using Blog.Application.Common.Requests.PostRequests;
+using Blog.Application.Common.DTOs.Requests.PostRequests;
 
 namespace Blog.Application.Abstractions.Services;
 
